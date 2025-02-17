@@ -1,9 +1,11 @@
-import { View, Text, SafeAreaView, Platform } from "react-native";
+import { View, Text, SafeAreaView } from "react-native";
 import React from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const vedioScreen = () => {
+  const { top } = useSafeAreaInsets();
   return (
-    <SafeAreaView style={{ marginTop: Platform.OS === "android" ? 50 : 1 }}>
+    <SafeAreaView style={{ paddingTop: top }}>
       <Text>vedioScreen</Text>
     </SafeAreaView>
   );
