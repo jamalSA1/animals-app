@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import { ClerkLoaded, ClerkProvider } from "@clerk/clerk-expo";
 import { tokenCache } from "@/lib/cache";
+import { SupabaseProvider } from "@/context/SupabaseContext";
 
 SplashScreen.preventAutoHideAsync();
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY as string;
@@ -52,13 +53,15 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
-      <ClerkLoaded>
-        <StatusBar style="auto" />
-        <GluestackUIProvider mode="light">
-          <InitialLayout />
-        </GluestackUIProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <SupabaseProvider>
+      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+        <ClerkLoaded>
+          <StatusBar style="auto" />
+          <GluestackUIProvider mode="light">
+            <InitialLayout />
+          </GluestackUIProvider>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </SupabaseProvider>
   );
 }

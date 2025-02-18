@@ -1,64 +1,67 @@
 import { View, Text, SafeAreaView, Platform, Image } from "react-native";
+import { Toast, ToastDescription, useToast } from "@/components/ui/toast";
 import React from "react";
-import { Button, ButtonText, ButtonIcon } from "@/components/ui/button";
+import { Button, ButtonText } from "@/components/ui/button";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useOAuth, useSSO } from "@clerk/clerk-expo";
+import { useSSO } from "@clerk/clerk-expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ImageBackground } from "@/components/ui/image-background";
 import image from "@/assets/images/bgImg.jpeg";
 import logo from "@/assets/images/logo3.png";
 import { Ionicons } from "@expo/vector-icons";
+import { useWarmUpBrowser } from "@/hooks/useWarmUpBrowser";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const { top } = useSafeAreaInsets();
   const { startSSOFlow } = useSSO();
+  const toast = useToast();
 
-  const handleGoogleSignIn = async () => {
+  const handleSocialSignIn = async (strategy: 'oauth_google' | 'oauth_apple' | 'oauth_facebook') => {
+    useWarmUpBrowser();
     try {
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: "oauth_google"
+      const { createdSessionId, setActive, signUp, signIn } = await startSSOFlow({
+        strategy
       });
 
-      if (createdSessionId && setActive) {
+      const userExistsButNeedsToSignIn =
+        signUp?.verifications?.externalAccount?.status === 'transferable' &&
+        signUp?.verifications?.externalAccount?.error?.code ===
+        'external_account_exists';
+
+      if (userExistsButNeedsToSignIn) {
+        const res = await signIn!.create({ transfer: true });
+        if (res.status === 'complete') {
+          setActive!({
+            session: res.createdSessionId,
+          });
+          router.push("/(tabs)");
+        }
+      } else if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
         router.push("/(tabs)");
       }
     } catch (err) {
-      console.error("OAuth error", err);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    try {
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: "oauth_apple"
+      console.error("OAuth error:", err);
+      toast.show({
+        placement: "top",
+        render: ({ id }) => (
+          <Toast action="error" variant="solid">
+            <ToastDescription>
+              حدث خطأ أثناء تسجيل الدخول. الرجاء المحاولة مرة أخرى
+            </ToastDescription>
+          </Toast>
+        ),
       });
-
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-        router.push("/(tabs)");
-      }
-    } catch (err) {
-      console.error("OAuth error", err);
     }
   };
-  const handleFacebookSignIn = async () => {
-    try {
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: "oauth_facebook"
-      });
 
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-        router.push("/(tabs)");
-      }
-    } catch (err) {
-      console.error("OAuth error", err);
-    }
-  };
+  // استخدام الوظيفة المشتركة
+  const handleGoogleSignIn = () => handleSocialSignIn('oauth_google');
+  const handleAppleSignIn = () => handleSocialSignIn('oauth_apple');
+  const handleFacebookSignIn = () => handleSocialSignIn('oauth_facebook');
 
   const handleContinueAsGuest = () => {
     router.push("/(tabs)");
